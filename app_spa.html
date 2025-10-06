@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgriVision Mobile Prototype (SPA)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* BASE & SHARED STYLES */
+        body { font-family: 'Open Sans', sans-serif; margin: 0; padding: 0; background-color: #F8F8F8; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; }
+        .app-screen { width: 100%; max-width: 450px; min-height: 100vh; background-color: #FFFFFF; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); display: flex; flex-direction: column; box-sizing: border-box; overflow: hidden; position: relative; }
+        .screen-content {
+            display: none; /* All screens are hidden by default */
+            flex-direction: column;
+            width: 100%;
+            min-height: 100vh;
+            padding: 0;
+            box-sizing: border-box;
+            position: absolute;
+            top: 0;
+            left: 0;
+            background-color: #FFFFFF;
+        }
+        .screen-content.active { display: flex; } /* JavaScript toggles the active screen */
+        
+        /* COLOR PALETTE */
+        .color-primary { color: #1F7A5F; }
+        .bg-primary { background-color: #1F7A5F; }
+        .color-highlight { color: #F7C961; }
+        .bg-highlight { background-color: #F7C961; }
+
+        /* HEADER & NAVIGATION */
+        .header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background-color: #FFFFFF; border-bottom: 1px solid #EEE; }
+        .header h1 { font-size: 1.5rem; margin: 0; font-weight: 700; }
+        .nav-link { font-size: 1.5rem; text-decoration: none; cursor: pointer; }
+        .content-area { padding: 20px 15px; flex-grow: 1; overflow-y: auto; }
+
+        /* === 1. SPLASH SCREEN STYLES === */
+        #splash-screen { justify-content: center; align-items: center; text-align: center; background-color: #1F7A5F; color: #FFFFFF; }
+        #splash-screen .mascot-icon { font-size: 5rem; color: #F7C961; margin-bottom: 30px; }
+        #splash-screen h1 { font-size: 3rem; margin-bottom: 0; }
+        #splash-screen p { font-size: 1.2rem; margin-top: 5px; color: #F7C961; }
+        #splash-screen .cta-button { display: block; width: 80%; padding: 15px; background-color: #F7C961; color: #333; text-decoration: none; border-radius: 10px; font-size: 1.2rem; font-weight: 700; margin-top: 50px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2); }
+
+        /* === 2. LANGUAGE SCREEN STYLES === */
+        .language-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 20px; }
+        .lang-card { background-color: #E6F3EB; border: 2px solid #1F7A5F; border-radius: 12px; padding: 15px 10px; text-align: center; text-decoration: none; color: #333; font-size: 1.1rem; font-weight: 700; cursor: pointer; }
+        .image-placeholder-cow { margin-top: 20px; margin-bottom: 20px; height: 150px; background-image: url('https://via.placeholder.com/450x150?text=Beautiful+Indian+Cattle+Breeds'); background-size: cover; background-position: center; border-radius: 10px; }
+
+        /* === 3. HOME/CAMERA STYLES === */
+        .camera-preview { height: 60vh; background-color: #333; display: flex; justify-content: center; align-items: center; color: #A9A9A9; font-size: 1.2rem; position: relative; }
+        .controls { padding: 20px 0; background-color: #FFFFFF; display: flex; align-items: center; justify-content: space-around; }
+        .capture-button { width: 80px; height: 80px; border-radius: 50%; background-color: #FFFFFF; border: 4px solid #1F7A5F; box-shadow: 0 0 15px rgba(31, 122, 95, 0.5); cursor: pointer; display: flex; justify-content: center; align-items: center; }
+        .capture-button::after { content: ''; width: 60px; height: 60px; border-radius: 50%; background-color: #1F7A5F; }
+        .upload-icon { font-size: 2.2rem; color: #555; cursor: pointer; }
+        .hint-text { font-size: 0.85rem; color: #777; text-align: center; padding: 0 20px 10px 20px; }
+        .analyzing-box { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255, 255, 255, 0.95); display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 1000; }
+        .progress-bar { width: 80%; height: 8px; background-color: #ccc; border-radius: 4px; margin-top: 20px; overflow: hidden; }
+        .progress-fill { width: 0%; height: 100%; background-color: #1F7A5F; }
+
+        /* === 4. RESULT CARD STYLES === */
+        .result-card-container { padding: 20px; }
+        .result-card { border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); text-align: center; padding: 20px; }
+        .breed-name { font-size: 2.5rem; font-weight: 700; color: #1F7A5F; margin-bottom: 5px; }
+        .confidence-score { font-size: 3.5rem; font-weight: 700; line-height: 1; margin: 0; }
+        .pill-high { background-color: #E6F3EB; color: #1F7A5F; padding: 4px 12px; border-radius: 20px; font-weight: 700; font-size: 0.9rem; margin-top: 10px; display: inline-block; }
+        .alt-chip-container { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; justify-content: center; }
+        .alt-chip { background-color: #F0F0F0; color: #555; padding: 8px 12px; border-radius: 20px; font-size: 0.9rem; }
+        .cta-container { display: flex; gap: 15px; margin-top: 30px; }
+        .button-cta { flex-grow: 1; padding: 16px 10px; border: none; border-radius: 10px; font-size: 1.1rem; font-weight: 700; cursor: pointer; text-align: center; text-decoration: none; }
+        .button-primary-cta { background-color: #1F7A5F; color: #FFFFFF; }
+        .button-secondary-cta { background-color: #F7C961; color: #333; }
+
+        /* === 5. DETAILS SCREEN STYLES === */
+        .breed-image-header { height: 200px; background-image: url('https://via.placeholder.com/450x200?text=Gir+Breed+Stock+Photo'); background-size: cover; background-position: center; margin-bottom: 20px; }
+        .section-title { font-size: 1.3rem; color: #1F7A5F; margin-top: 25px; margin-bottom: 10px; border-bottom: 2px solid #F7C961; padding-bottom: 5px; }
+        .fact-card { background-color: #F0F0F0; padding: 10px; border-radius: 8px; margin-bottom: 10px; font-size: 0.95rem; }
+        .care-checklist li { list-style: none; padding-left: 0; font-size: 1rem; }
+        .care-checklist li::before { content: '✅'; margin-right: 10px; }
+
+        /* === 6. HERD LIST STYLES === */
+        #herd-list-screen .header { background-color: #1F7A5F; color: #FFFFFF; }
+        #herd-list-screen .header h1 { color: #FFFFFF; }
+        #herd-list-screen .nav-link { color: #F7C961; }
+        .animal-card { display: flex; align-items: center; border-radius: 12px; padding: 10px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); cursor: pointer; }
+        .animal-thumbnail { width: 60px; height: 60px; border-radius: 8px; background-color: #E0E0E0; margin-right: 15px; display: flex; justify-content: center; align-items: center; font-size: 2rem; }
+        .animal-details strong { display: block; font-size: 1.1rem; color: #1F7A5F; font-weight: 700; }
+        .animal-details span { font-size: 0.9rem; color: #555; }
+    </style>
+</head>
+<body>
+
+<div class="app-screen">
+    
+    <div id="splash-screen" class="screen-content active">
+        <div>
+            <div class="mascot-icon">🐄</div>
+            <div class="logo-section">
+                <h1>AgriVision</h1>
+                <p>"Identify breed in seconds"</p>
+            </div>
+        </div>
+        <div>
+            <h2 style="font-size: 1.8rem;">Welcome to AgriVision</h2>
+            <p style="font-style: italic; font-size: 1.1rem; margin-top: 15px;">"We Build Trust"</p>
+        </div>
+        <button class="cta-button" onclick="navigate('language-screen')">Get Started</button>
+    </div>
+
+    <div id="language-screen" class="screen-content">
+        <div class="header">
+            <h1>Language Selection</h1>
+            <a class="nav-link color-primary" onclick="navigate('splash-screen')">&#x276E;</a> 
+        </div>
+        <div class="content-area">
+            <h2>Please select your preferred language:</h2>
+            <div class="image-placeholder-cow"></div>
+            <p class="image-caption">Indian Breed Cattle</p>
+            <div class="language-grid">
+                <button class="lang-card" onclick="navigate('home-screen')">English</button>
+                <button class="lang-card" onclick="navigate('home-screen')">हिंदी (Hindi)</button>
+                <button class="lang-card" onclick="navigate('home-screen')">ಕನ್ನಡ (Kannada)</button>
+                <button class="lang-card" onclick="navigate('home-screen')">தமிழ் (Tamil)</button>
+                <button class="lang-card" onclick="navigate('home-screen')">తెలుగు (Telugu)</button>
+                <button class="lang-card" onclick="navigate('home-screen')">मराठी (Marathi)</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="home-screen" class="screen-content">
+        <div class="header">
+            <h1>AgriVision</h1>
+            <a class="nav-link color-primary" onclick="navigate('herd-list-screen')">&#x1F42E;</a> 
+        </div>
+        
+        <div class="camera-preview">
+            <div class="camera-overlay-text">
+                [Live Camera Feed Placeholder]
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="upload-icon" onclick="alert('Open Gallery/Upload screen')">&#x1F5BC;</div> 
+
+            <button class="capture-button" onclick="startAnalysis()"></button>
+            
+            <div style="width: 2.2rem; visibility: hidden;"></div> 
+        </div>
+
+        <p class="hint-text">Position animal head/side for best result</p>
+        
+        <div id="analyzing-anim" class="analyzing-box">
+            <h2 class="color-primary">Analyzing Image...</h2>
+            <p style="color: #555; font-size: 1.1rem;">Improving result with local dataset...</p>
+            <div class="progress-bar"><div id="progress-fill" class="progress-fill"></div></div>
+        </div>
+    </div>
+
+    <div id="result-screen" class="screen-content">
+        <div class="header">
+            <h1>Breed Result</h1>
+            <a class="nav-link color-primary" onclick="navigate('home-screen')">&#x276E;</a>
+        </div>
+        <div class="result-card-container">
+            <div class="result-card">
+                <p class="scientific-tag" style="color:#666; margin:0 0 5px 0;">Likely identification:</p>
+                <h2 class="breed-name">Gir</h2>
+                <p class="scientific-tag" style="color:#666; font-style:italic;">Bos indicus | Gujarat, India</p>
+
+                <div class="confidence-area">
+                    <span class="confidence-score color-primary">87%</span>
+                    <div class="pill-high">
+                        <span style="margin-right: 5px;">🐄</span>High Confidence
+                    </div>
+                    <p style="font-size: 1.1rem; color: #333; margin-top: 5px;">Model Confidence Score</p>
+                </div>
+
+                <div style="text-align: left; margin-top: 20px; border-top: 1px solid #EEE; padding-top: 15px;">
+                    <h3 style="font-size: 1.1rem; margin:0 0 10px 0;">Top 3 Alternatives</h3>
+                    <div class="alt-chip-container">
+                        <div class="alt-chip">Sahiwal (8%)</div>
+                        <div class="alt-chip">Red Sindhi (3%)</div>
+                        <div class="alt-chip">Kankrej (2%)</div>
+                    </div>
+                </div>
+                
+                <div class="cta-container">
+                    <button class="button-cta button-primary-cta" onclick="navigate('herd-list-screen')">
+                        <span style="margin-right: 8px;">💾</span>Save to Herd
+                    </button>
+                    <button class="button-cta button-secondary-cta" onclick="navigate('details-screen')">
+                        <span style="margin-right: 8px;">🔍</span>View Details
+                    </button>
+                </div>
+            </div>
+            <div style="text-align: center; margin-top: 25px;">
+                <a href="#" class="color-primary" style="text-decoration:none; font-weight:700;">
+                    <span style="margin-right: 8px;">📝</span>Submit Feedback & Report Misclassification
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div id="details-screen" class="screen-content">
+        <div class="header">
+            <a class="nav-link" onclick="navigate('result-screen')">&#x276E;</a> 
+            <h1 class="color-primary">Gir Breed Facts</h1>
+            <a class="nav-link color-primary" style="font-size: 1.1rem; font-weight: 700;" onclick="navigate('herd-list-screen')">Herd List</a>
+        </div>
+
+        <div class="breed-image-header"></div>
+        
+        <div class="content-area" style="padding-top:0;">
+            <h2 class="section-title">Key Traits & Origin</h2>
+            <div class="fact-card"><strong>Origin:</strong> Saurashtra region of Gujarat, India.</div>
+            <div class="fact-card"><strong>Milk Yield:</strong> High yield, averaging 1,500–2,000 litres per lactation.</div>
+
+            <h2 class="section-title">Recommended Care Checklist</h2>
+            <ul class="care-checklist" style="padding-left:0;">
+                <li>Ensure 2-3 hours of open grazing daily.</li>
+                <li>Vaccinate against FMD (Foot-and-Mouth Disease) biannually.</li>
+                <li>Recommended feed: High-protein cakes and mineral supplements.</li>
+            </ul>
+
+            <h2 class="section-title">Regional Distribution in India</h2>
+            <div style="height: 150px; background-color: #A0C4FF; border-radius: 10px; display: flex; justify-content: center; align-items: center; color: #333; font-weight: 700;">
+                Simplified Heatmap Placeholder
+            </div>
+            
+            <button class="next-flow-button button-cta button-primary-cta" style="width: 100%; margin-top: 20px;" onclick="navigate('herd-list-screen')">Go to Herd Record</button>
+        </div>
+    </div>
+
+    <div id="herd-list-screen" class="screen-content">
+        <div class="header bg-primary">
+            <a class="nav-link" style="color:white;" onclick="navigate('home-screen')">&#x276E;</a> 
+            <h1>My Herd Record (5)</h1>
+            <a class="nav-link color-highlight">&#9881;</a>
+        </div>
+
+        <div class="content-area">
+            <h2 style="font-size: 1.2rem; color: #333; margin-top: 0;">Animals Saved</h2>
+
+            <div class="animal-card" onclick="alert('Viewing Animal Profile A-001')">
+                <div class="animal-thumbnail">🐄</div>
+                <div class="animal-details">
+                    <strong>Gir</strong> <span class="tag">(Tag: A-001)</span>
+                    <span class="date">Last seen: 18 Sept 2025</span>
+                </div>
+                <span style="font-size: 1.5rem; color: #999;">&#x276F;</span>
+            </div>
+            <div class="animal-card" onclick="alert('Viewing Animal Profile B-005')">
+                <div class="animal-thumbnail">🐂</div>
+                <div class="animal-details"><strong>Sahiwal</strong> <span class="tag">(Tag: B-005)</span><span class="date">Last seen: 15 Sept 2025</span></div>
+                <span style="font-size: 1.5rem; color: #999;">&#x276F;</span>
+            </div>
+             <div class="animal-card" onclick="alert('Viewing Animal Profile B-101')">
+                <div class="animal-thumbnail">🐃</div>
+                <div class="animal-details"><strong>Murrah Buffalo</strong> <span class="tag">(Tag: B-101)</span><span class="date">Last seen: 20 Sept 2025</span></div>
+                <span style="font-size: 1.5rem; color: #999;">&#x276F;</span>
+            </div>
+            <div class="animal-card" onclick="alert('Viewing Animal Profile C-22')">
+                <div class="animal-thumbnail">🍼</div>
+                <div class="animal-details"><strong>Red Sindhi</strong> <span class="tag">(Tag: C-22)</span><span class="date">Last seen: 21 Sept 2025</span></div>
+                <span style="font-size: 1.5rem; color: #999;">&#x276F;</span>
+            </div>
+            <div class="animal-card" onclick="alert('Viewing Animal Profile D-50')">
+                <div class="animal-thumbnail">🐐</div>
+                <div class="animal-details"><strong>Jersey Cross</strong> <span class="tag">(Tag: D-50)</span><span class="date">Last seen: 19 Sept 2025</span></div>
+                <span style="font-size: 1.5rem; color: #999;">&#x276F;</span>
+            </div>
+
+            <div style="text-align: center; margin-top: 30px;">
+                <button class="button-cta button-secondary-cta" style="padding: 12px 25px; width: 100%;" onclick="navigate('home-screen')">+ Add New Animal</button>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // ============================================= JAVASCRIPT NAVIGATION LOGIC =============================================
+
+    const screens = document.querySelectorAll('.screen-content');
+    const analyzingAnim = document.getElementById('analyzing-anim');
+    const progressBar = document.getElementById('progress-fill');
+
+    // Function to handle screen switching
+    function navigate(targetId) {
+        // 1. Hide all screens
+        screens.forEach(screen => {
+            screen.classList.remove('active');
+        });
+
+        // 2. Show the target screen
+        const targetScreen = document.getElementById(targetId);
+        if (targetScreen) {
+            targetScreen.classList.add('active');
+            
+            // Optional: Update URL hash for state tracking (no page reload)
+            window.location.hash = '#' + targetId; 
+        }
+    }
+
+    // Function to handle the Home -> Result transition with animation
+    function startAnalysis() {
+        // 1. Show the loading overlay
+        analyzingAnim.style.display = 'flex';
+        progressBar.style.width = '0%';
+        
+        // 2. Simulate the progress animation
+        let progress = 0;
+        const interval = setInterval(() => {
+            progress += 5;
+            progressBar.style.width = progress + '%';
+
+            if (progress >= 100) {
+                clearInterval(interval);
+                // 3. Navigate to the result screen after a short delay
+                setTimeout(() => {
+                    analyzingAnim.style.display = 'none';
+                    navigate('result-screen');
+                }, 300); 
+            }
+        }, 150); // Progress update every 150ms for a total of 3 seconds
+    }
+    
+    // Initial load: Check the URL hash or load the splash screen
+    document.addEventListener('DOMContentLoaded', () => {
+        const initialHash = window.location.hash.substring(1);
+        if (initialHash && document.getElementById(initialHash)) {
+            navigate(initialHash);
+        } else {
+            navigate('splash-screen');
+        }
+    });
+
+    // Handle back/forward button (popstate)
+    window.addEventListener('popstate', (event) => {
+        const hash = window.location.hash.substring(1);
+        if (hash) {
+            navigate(hash);
+        } else {
+             // Default to splash if hash is cleared
+            navigate('splash-screen');
+        }
+    });
+</script>
+</body>
+</html>
